@@ -1,0 +1,18 @@
+name: Scoop Bucket Auto Update
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天自动运行
+  workflow_dispatch: # 允许手动点按钮运行
+
+jobs:
+  excavator:
+    runs-on: windows-latest
+    permissions:
+      contents: write # 赋予机器人写入权限(关键)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Excavator
+        uses: scoop-installer/scoop-action@v1
+        with:
+          bucket_dir: 'bucket'
