@@ -1,33 +1,9 @@
-name: Daily Scoop Excavator
-
-on:
-  schedule:
-    # 每天北京时间早上 8 点运行 (UTC 0:00)
-    - cron: '0 0 * * *'
-  workflow_dispatch: # 允许手动点按钮运行
-
-jobs:
-  excavator:
-    name: Excavate
-    runs-on: windows-latest
-    
-    permissions:
-      contents: write # 必须赋予写入权限
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Initialize Scoop Environment
-        run: |
-          # 1. 安装 Scoop
-          Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-          # 2. 安装 git (scoop-checkver 不需要单独安装，它是内置的)
-          scoop install git
-
-      - name: Run Crawler (PowerShell)
+- name: Run Crawler (PowerShell)
         shell: powershell
         run: |
+          # === 修复 1: 强制开启 TLS 1.2 (解决 QQ 音乐连接中断问题) ===
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          
           # === 核心配置区 ===
           $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
@@ -39,9 +15,7 @@ jobs:
               Write-Host "Analyzing: $($manifest.BaseName)..." -NoNewline
               
               try {
-                  # === 关键修正点 ===
-                  # 之前指向了不存在的 scoop-checkver 目录
-                  # 现在改为指向 Scoop 自带的目录: apps\scoop\current\bin\checkver.ps1
+                  # Scoop checkver 脚本路径
                   $checkverScript = "$env:USERPROFILE\scoop\apps\scoop\current\bin\checkver.ps1"
                   
                   # 调用 checkver
@@ -62,16 +36,3 @@ jobs:
           }
           
           Write-Host "Total apps updated today: $updatedCount"
-
-      - name: Commit & Push
-        run: |
-          git config --global user.name "Scoop Excavator"
-          git config --global user.email "excavator@users.noreply.github.com"
-          
-          if (git status --porcelain) {
-            git add bucket/*.json
-            git commit -m "Auto-update: Found new versions"
-            git push
-          } else {
-            Write-Host "No updates found today."
-          }
