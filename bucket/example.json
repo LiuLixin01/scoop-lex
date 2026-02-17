@@ -7,7 +7,7 @@
     "hash": "disable",
     "checkver": {
         "url": "https://github.com/microsoft/vscode/releases",
-        "regex": "Tag v([\\d.]+)"
+        "regex": "releases/tag/(?:v|V)?([\\d.]+)"
     },
     "autoupdate": {
         "url": "https://github.com/microsoft/vscode/archive/$version.zip"
