@@ -2,17 +2,31 @@ name: Scoop Bucket Auto Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 每天自动运行
-  workflow_dispatch: # 允许手动点按钮运行
+    - cron: '0 0 * * *' # 每天 UTC 0点 (北京时间早上8点) 运行
+  workflow_dispatch: # 允许手动运行
 
 jobs:
   excavator:
+    name: Check & Update
     runs-on: windows-latest
     permissions:
-      contents: write # 赋予机器人写入权限(关键)
+      contents: write # 必须赋予写权限，否则无法提交更新
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Excavator
-        uses: scoop-installer/scoop-action@v1
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Checkver
+        # 使用 foosel 维护的动作，专门用于运行 checkver
+        uses: foosel/scoop-checkver-action@main
         with:
-          bucket_dir: 'bucket'
+          bucket: bucket # 指定你的 json 文件所在的文件夹名
+
+      - name: Commit Changes
+        # 如果有文件变化，自动提交回仓库
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "Scoop Updater"
+          author_email: "updater@users.noreply.github.com"
+          message: "Auto-update: Update manifests"
+          add: "bucket/*.json"
