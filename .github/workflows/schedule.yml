@@ -22,17 +22,53 @@ jobs:
         run: |
           # 1. 安装 Scoop
           Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-          # 2. 安装 git (scoop-checkver 不需要单独安装，它是内置的)
+          # 2. 安装 git (scoop-checkver 是内置的)
           scoop install git
+
+      # === 🔍 核心调试步骤 (新增) ===
+      # 这一步会打印出目标网站的真实 HTML，帮我们看清下载链接藏在哪里
+      - name: Debug - Inspect HTML
+        shell: powershell
+        run: |
+          # 强制开启 TLS 1.2
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          
+          # 定义我们要诊断的 URL
+          $targets = @(
+            "https://www.doubao.com/download/desktop/win",
+            "https://y.qq.com/download/download.html"
+          )
+
+          foreach ($url in $targets) {
+              Write-Host "`n----- DEBUGGING: $url -----" -ForegroundColor Cyan
+              try {
+                  # 模拟爬虫抓取
+                  $content = (Invoke-WebRequest -Uri $url -UserAgent $UserAgent -UseBasicParsing).Content
+                  
+                  # 打印前 2000 个字符 (避免日志太长，只看头部结构)
+                  Write-Host $content.Substring(0, [math]::Min(2000, $content.Length))
+                  
+                  # 顺便帮我搜一下有没有 .exe 的痕迹
+                  $exeMatches = [Regex]::Matches($content, "[\w-]+\.exe")
+                  if ($exeMatches.Count -gt 0) {
+                      Write-Host "`n[Found potential .exe files!]" -ForegroundColor Yellow
+                      foreach ($m in $exeMatches) { Write-Host $m.Value }
+                  } else {
+                      Write-Host "`n[WARNING] No .exe found in plain text." -ForegroundColor Yellow
+                  }
+              } catch {
+                  Write-Host "Failed to fetch: $_" -ForegroundColor Red
+              }
+          }
 
       - name: Run Crawler (PowerShell)
         shell: powershell
         run: |
-          # === 修复 1: 强制开启 TLS 1.2 (解决 QQ 音乐连接中断问题) ===
+          # === 修复: 强制开启 TLS 1.2 ===
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           
-          # === 核心配置区 ===
-          # 修复 2: 设置 UserAgent 伪装成浏览器
+          # === 配置: 浏览器伪装 ===
           $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
           # 获取所有 json 文件
@@ -43,7 +79,6 @@ jobs:
               Write-Host "Analyzing: $($manifest.BaseName)..." -NoNewline
               
               try {
-                  # === 路径修正 ===
                   # 指向 Scoop 自带的 checkver 脚本
                   $checkverScript = "$env:USERPROFILE\scoop\apps\scoop\current\bin\checkver.ps1"
                   
@@ -59,6 +94,7 @@ jobs:
                       Write-Host " [No Change]" -ForegroundColor Gray
                   }
               } catch {
+                  # 注意：这里的 ERROR 通常是脚本本身的输出，不是崩溃
                   Write-Host " [ERROR]" -ForegroundColor Red
                   Write-Host $_.Exception.Message
               }
@@ -73,7 +109,7 @@ jobs:
           
           if (git status --porcelain) {
             git add bucket/*.json
-            git commit -m "Auto-update: Found new versions"
+            git commit -m "Auto-update: Found new versions from daily crawl"
             git push
           } else {
             Write-Host "No updates found today."
