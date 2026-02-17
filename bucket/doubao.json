@@ -13,7 +13,7 @@
     },
     "checkver": {
         "url": "https://www.doubao.com/download/desktop/win",
-        "regex": "version\":\"([\\d.]+)\""
+        "regex": "Doubao_installer_([\\d.]+)\\.exe"
     },
     "autoupdate": {
         "url": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/$version/Doubao_installer_$version.exe"
