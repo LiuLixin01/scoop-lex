@@ -8,7 +8,7 @@ on:
 jobs:
   excavator:
     name: Check & Update
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write # 必须赋予写权限，否则无法提交更新
     
