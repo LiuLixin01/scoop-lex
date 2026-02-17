@@ -1,0 +1,16 @@
+{
+    "version": "19.56.0",
+    "description": "QQ音乐 - 腾讯推出的华语强力音乐播放器",
+    "homepage": "https://y.qq.com",
+    "license": "Proprietary",
+    "url": "https://dldir.y.qq.com/music/clntupate/QQMusic_Setup_1956.exe",
+    "hash": "check",
+    "checkver": {
+        "url": "https://y.qq.com/download/download.html",
+        "regex": "QQMusic_Setup_([\\d]+)\\.exe",
+        "useragent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    },
+    "autoupdate": {
+        "url": "https://dldir.y.qq.com/music/clntupate/QQMusic_Setup_$version.exe"
+    }
+}
