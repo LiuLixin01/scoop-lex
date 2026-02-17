@@ -1,32 +1,78 @@
-name: Scoop Bucket Auto Update
+name: Daily Scoop Excavator
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 每天 UTC 0点 (北京时间早上8点) 运行
-  workflow_dispatch: # 允许手动运行
+    # 每天北京时间早上 8 点运行 (UTC 0:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许手动点按钮运行
 
 jobs:
   excavator:
-    name: Check & Update
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # 必须赋予写权限，否则无法提交更新
+    name: Excavate
+    runs-on: windows-latest
     
+    permissions:
+      contents: write # 必须赋予写入权限
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Checkver
-        # 使用 foosel 维护的动作，专门用于运行 checkver
-        uses: foosel/scoop-checkver-action@main
-        with:
-          bucket: bucket # 指定你的 json 文件所在的文件夹名
+      - name: Initialize Scoop Environment
+        run: |
+          # 1. 安装 Scoop
+          Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
+          # 2. 安装 checkver 工具 (这是 Scoop 的核心更新组件)
+          scoop install scoop-checkver git
 
-      - name: Commit Changes
-        # 如果有文件变化，自动提交回仓库
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: "Scoop Updater"
-          author_email: "updater@users.noreply.github.com"
-          message: "Auto-update: Update manifests"
-          add: "bucket/*.json"
+      - name: Run Crawler (PowerShell)
+        shell: powershell
+        run: |
+          # === 核心配置区 ===
+          # 定义一个通用的浏览器标识，伪装成 Chrome
+          $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          
+          # 获取所有 json 文件
+          $manifests = Get-ChildItem "bucket/*.json"
+          $updatedCount = 0
+
+          foreach ($manifest in $manifests) {
+              Write-Host "Analyzing: $($manifest.BaseName)..." -NoNewline
+              
+              try {
+                  # 调用 Scoop 的 checkver 命令
+                  # -u: update (更新文件)
+                  # -f: force (强制检查)
+                  # 这里的技巧：Scoop 原生支持读取 json 里的 useragent 字段，如果没配，它默认是空。
+                  # 这一步会自动去官网抓取、计算 Hash、写入文件
+                  
+                  . "$env:USERPROFILE\scoop\apps\scoop-checkver\current\bin\checkver.ps1" -Dir "bucket" -App $manifest.BaseName -u
+                  
+                  # 检查文件是否真的变了（Git 状态）
+                  $gitStatus = git status --porcelain $manifest.FullName
+                  if ($gitStatus) {
+                      Write-Host " [UPDATED!]" -ForegroundColor Green
+                      $updatedCount++
+                  } else {
+                      Write-Host " [No Change]" -ForegroundColor Gray
+                  }
+              } catch {
+                  Write-Host " [ERROR]" -ForegroundColor Red
+                  Write-Host $_.Exception.Message
+              }
+          }
+          
+          Write-Host "Total apps updated today: $updatedCount"
+
+      - name: Commit & Push
+        run: |
+          git config --global user.name "Scoop Excavator"
+          git config --global user.email "excavator@users.noreply.github.com"
+          
+          if (git status --porcelain) {
+            git add bucket/*.json
+            git commit -m "Auto-update: Found new versions"
+            git push
+          } else {
+            Write-Host "No updates found today."
+          }
