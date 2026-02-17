@@ -1,0 +1,21 @@
+{
+    "version": "2.0.31",
+    "description": "豆包 - 字节跳动旗下的 AI 智能助手",
+    "homepage": "https://www.doubao.com/",
+    "license": "Proprietary",
+    "url": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/2.0.31/Doubao_installer_2.0.31.exe",
+    "hash": "check",
+    "installer": {
+        "script": [
+            "# 尝试静默安装",
+            "Start-Process -FilePath \"$dir\\Doubao_installer_$version.exe\" -ArgumentList '/S', '/TR', \"$dir\" -Wait"
+        ]
+    },
+    "checkver": {
+        "url": "https://www.doubao.com/download/desktop/win",
+        "regex": "version\":\"([\\d.]+)\""
+    },
+    "autoupdate": {
+        "url": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/$version/Doubao_installer_$version.exe"
+    }
+}
