@@ -22,14 +22,13 @@ jobs:
         run: |
           # 1. 安装 Scoop
           Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-          # 2. 安装 checkver 工具 (这是 Scoop 的核心更新组件)
-          scoop install scoop-checkver git
+          # 2. 安装 git (scoop-checkver 不需要单独安装，它是内置的)
+          scoop install git
 
       - name: Run Crawler (PowerShell)
         shell: powershell
         run: |
           # === 核心配置区 ===
-          # 定义一个通用的浏览器标识，伪装成 Chrome
           $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
           # 获取所有 json 文件
@@ -40,15 +39,15 @@ jobs:
               Write-Host "Analyzing: $($manifest.BaseName)..." -NoNewline
               
               try {
-                  # 调用 Scoop 的 checkver 命令
-                  # -u: update (更新文件)
-                  # -f: force (强制检查)
-                  # 这里的技巧：Scoop 原生支持读取 json 里的 useragent 字段，如果没配，它默认是空。
-                  # 这一步会自动去官网抓取、计算 Hash、写入文件
+                  # === 关键修正点 ===
+                  # 之前指向了不存在的 scoop-checkver 目录
+                  # 现在改为指向 Scoop 自带的目录: apps\scoop\current\bin\checkver.ps1
+                  $checkverScript = "$env:USERPROFILE\scoop\apps\scoop\current\bin\checkver.ps1"
                   
-                  . "$env:USERPROFILE\scoop\apps\scoop-checkver\current\bin\checkver.ps1" -Dir "bucket" -App $manifest.BaseName -u
+                  # 调用 checkver
+                  . $checkverScript -Dir "bucket" -App $manifest.BaseName -u
                   
-                  # 检查文件是否真的变了（Git 状态）
+                  # 检查文件是否真的变了
                   $gitStatus = git status --porcelain $manifest.FullName
                   if ($gitStatus) {
                       Write-Host " [UPDATED!]" -ForegroundColor Green
