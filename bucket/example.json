@@ -1,10 +1,10 @@
 {
-    "version": "1.119.1",
+    "version": "1.120.0",
     "description": "这是一个用于测试自动更新的 VS Code 示例",
     "homepage": "https://code.visualstudio.com/",
     "license": "MIT",
-    "url": "https://github.com/microsoft/vscode/archive/1.119.1.zip",
-    "hash": "da43dcd1b54262d4eae92593586f6147cc663c7cf0fa9c8a190f282dca72202a",
+    "url": "https://github.com/microsoft/vscode/archive/1.120.0.zip",
+    "hash": "2cb5683dc2f60477a51f42abdf6f1d8d5e97a239de57a69a1674e6684906be9b",
     "checkver": {
         "url": "https://github.com/microsoft/vscode/releases",
         "regex": "releases/tag/(?:v|V)?([\\d.]+)"
